@@ -29,14 +29,17 @@ public class WebSecurityConfig {
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
     private final AuthEntryPointJwt unauthorizedHandler;
+    private final AuthTokenFilter authTokenFilter; // ✅ ADDED
 
-    // Constructor Injection
+    // Constructor Injection - UPDATED
     public WebSecurityConfig(JwtUtils jwtUtils, 
                             UserDetailsService userDetailsService, 
-                            AuthEntryPointJwt unauthorizedHandler) {
+                            AuthEntryPointJwt unauthorizedHandler,
+                            AuthTokenFilter authTokenFilter) { // ✅ ADDED
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.unauthorizedHandler = unauthorizedHandler;
+        this.authTokenFilter = authTokenFilter; // ✅ ADDED
     }
 
     @Bean
@@ -57,11 +60,7 @@ public class WebSecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    @Bean
-    public AuthTokenFilter authenticationJwtTokenFilter() {
-        // Use default constructor - dependencies are injected via @Autowired in AuthTokenFilter
-        return new AuthTokenFilter();
-    }
+    // ✅ REMOVED the problematic bean method - using direct injection instead
 
     // CORS Configuration
     @Bean
@@ -83,7 +82,7 @@ public class WebSecurityConfig {
         return source;
     }
 
-    // Security Filter Chain Configuration
+    // Security Filter Chain Configuration - UPDATED
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -94,13 +93,14 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/cars/**").permitAll()
+                .requestMatchers("/api/test/**").permitAll() // ✅ ADDED test endpoint
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers("/api/bookings/**").authenticated()
                 .anyRequest().authenticated()
             );
 
         http.authenticationProvider(authenticationProvider());
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class); // ✅ USING INJECTED BEAN
         return http.build();
     }
 }
